@@ -5,4 +5,4 @@
     目前可实现黑白数据集的训练和预测（论文复现），下一步实现彩色数据集的处理和训练
 ## UNet修改思路
     下一步拟在UNet中加入注意力机制等一系列来优化网络
-    ![Image](https://github.com/hancy021202/DMD-UNet/blob/main/%E5%9B%BE%E7%89%87/UNet%E7%BD%91%E7%BB%9C%E7%BB%93%E6%9E%84%E5%9B%BE.jpg "UNet")
+    ![Image](https://github.com/hancy021202/DMD-UNet/blob/main/picture/UNet.jpg "UNet")
