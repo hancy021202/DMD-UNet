@@ -28,9 +28,9 @@ cudnn.benchmark = False
 
 batch_size = 1  # 每次训练32个数据
 # ============= 3) Load Model + Loss + Optimizer + Learn_rate_update ==========#
-model1_path = "Weights_up90.pth"  # 存储路径
-model2_path = "Weights_down90.pth"  # 存储路径
-model3_path = "Weights_phase90.pth"  # 存储路径
+model1_path = "Weights_up400.pth"  # 存储路径
+model2_path = "Weights_down400.pth"  # 存储路径
+model3_path = "Weights_phase400.pth"  # 存储路径
 model1 = IUnet().cuda()
 if os.path.isfile(model1_path):
     model1.load_state_dict(torch.load(model1_path))  ## Load the pretrained Encoder
@@ -80,22 +80,24 @@ def predict(device, validate_loader):
             image1 = np.array(image1.data.cpu()[0])[0]
             image2 = np.array(image2.data.cpu()[0])[0]
             image3 = np.array(image3.data.cpu()[0])[0]
+            image4 = np.arctan(image1 / (image2 + 1e-8))
             label1 = np.array(label1.data.cpu()[0])[0]
             label2 = np.array(label2.data.cpu()[0])[0]
             label3 = np.array(label3.data.cpu()[0])[0]
-            image1 = image1 / 255.0
-            image2 = image2 / 255.0
-            image3 = image3 / 255.0
-            label1 = label1 / 255.0
-            label2 = label2 / 255.0
-            label3 = label3 / 255.0
-    return image1, image2, image3, label1, label2, label3
+            image1 = image1 / 1.0
+            image2 = image2 / 1.0
+            image3 = image3 / 1.0
+            image4 = image4 / 255.0
+            label1 = label1 / 1.0
+            label2 = label2 / 1.0
+            label3 = label3 / 1.0
+        return image1, image2, image3, image4, label1, label2, label3
 
 
 if __name__ == "__main__":
 
     # 数据集载入
-    validate_path = 'D:\\活动\\大创\\工程文件\\解相unet\\data\\data_new\\val_new\\img_new\\'
+    validate_path = 'G:\\projects\\解相unet\\data\\data_new\\val_new\\img_new\\'
     [x_up_validate_label, x_down_validate_label, x_phase_validate_label, x_validate_img] = groundtruth.load_img(
         validate_path, [480, 480])
     validate_dataset = data_Loader(x_validate_img, x_up_validate_label, x_down_validate_label, x_phase_validate_label)
@@ -105,94 +107,123 @@ if __name__ == "__main__":
     # 选择设备，有cuda用cuda，没有就用cpu
     print("GPU:", torch.cuda.is_available())
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    [x_up_pred, x_down_pred, x_phase_pred, x_up_label, x_down_label, x_phase_label] = predict(device, validate_loader)
-    ######################################################
+    [x_up_pred, x_down_pred, x_phase_pred, x_phase_pred_new, x_up_label, x_down_label, x_phase_label] = predict(device,validate_loader)
+    ######################################################预测分子
+    plt.figure()
     plt.imshow(x_up_pred, cmap='gray')  # 预测值
     plt.axis('off')
-    plt.figure()
+    plt.title('x_up_pred')
 
+    plt.figure()
     plt.imshow(x_up_label, cmap='gray')  # 原始值
     plt.axis('off')
+    plt.title('x_up_label')
+
+    error_x_up = abs(x_up_pred - x_up_label)
+
     plt.figure()
-
-    error_xm = abs(x_up_pred - x_up_label)
-
-    plt.imshow(error_xm, cmap='gray')  # 误差值
+    plt.imshow(error_x_up, cmap='gray')  # 误差值
     plt.axis('off')
-    plt.figure()
+    plt.title('error_x_up')
     plt.show()
 
     sum_error1 = 0
     for i in range(480):
         for j in range(480):
-            sum_error1 = sum_error1 + error_xm[i, j]
+            sum_error1 = sum_error1 + error_x_up[i, j]
     mae_up = sum_error1 / 480 / 480
     print('mae_up:', mae_up)
-    #######################################################
+    #######################################################预测分母
+    plt.figure()
     plt.imshow(x_down_pred, cmap='gray')  # 预测值
     plt.axis('off')
-    plt.figure()
+    plt.title('x_down_pred')
 
+    plt.figure()
     plt.imshow(x_down_label, cmap='gray')  # 原始值
     plt.axis('off')
+    plt.title('x_down_label')
+
+    error_x_down = abs(x_down_pred - x_down_label)
+
     plt.figure()
-
-    error_xn = abs(x_down_pred - x_down_label)
-
-    plt.imshow(error_xn, cmap='gray')  # 误差值
+    plt.imshow(error_x_down, cmap='gray')  # 误差值
     plt.axis('off')
-    plt.figure()
+    plt.title('error_x_down')
     plt.show()
 
     sum_error2 = 0
     for i in range(480):
         for j in range(480):
-            sum_error2 = sum_error2 + error_xn[i, j]
+            sum_error2 = sum_error2 + error_x_down[i, j]
     mae_down = sum_error2 / 480 / 480
     print('mae_down:', mae_down)
-    #######################################################
+    #######################################################直接预测相位
+    plt.figure()
     plt.imshow(x_phase_pred, cmap='gray')  # 预测值
     plt.axis('off')
-    plt.figure()
+    plt.title('x_phase_pred')
 
+    plt.figure()
     plt.imshow(x_phase_label, cmap='gray')  # 原始值
     plt.axis('off')
+    plt.title('x_phase_label')
+
+    error_x_phase = abs(x_phase_pred - x_phase_label)
+    error_x_phase_slice = error_x_phase[240, :]
+
     plt.figure()
-
-    error_xp = abs(x_phase_pred - x_phase_label)
-
-    plt.imshow(error_xp, cmap='gray')  # 误差值
+    plt.imshow(error_x_phase, cmap='gray')  # 误差值
     plt.axis('off')
+    plt.title('error_x_phase')
+
     plt.figure()
+    plt.plot(error_x_phase_slice)  # 误差值
+    plt.xticks([0, 479])
+    plt.yticks([0, 0.00006])
+    plt.grid()
+    plt.title('error_x_phase_slice')
     plt.show()
 
     sum_error3 = 0
     for i in range(480):
         for j in range(480):
-            sum_error3 = sum_error3 + error_xp[i, j]
+            sum_error3 = sum_error3 + error_x_phase[i, j]
     mae_phase = sum_error3 / 480 / 480
     print('mae_phase:', mae_phase)
-    #######################################################
-    x_phase_pred_new = np.arctan(x_up_pred / x_down_pred)
+    #######################################################求商预测相位
+    # x_phase_pred_new = np.arctan(x_up_label / (x_down_label+1e-8))
+    # x_phase_pred_new = x_phase_pred_new / 255.0
+
+    plt.figure()
     plt.imshow(x_phase_pred_new, cmap='gray')
     plt.axis('off')
+    plt.title('x_phase_pred_new')
+
     plt.figure()
-
-    error_x = abs(x_phase_pred_new - x_phase_pred)
-
-    plt.imshow(error_x, cmap='gray')  # 误差值
+    plt.imshow(x_phase_label, cmap='gray')  # 原始值
     plt.axis('off')
+    plt.title('x_phase_label')
+
+    error_x_phase_new = abs(x_phase_pred_new - x_phase_label)
+    error_x_phase_new_slice = error_x_phase_new[240, :]
+
     plt.figure()
+    plt.imshow(error_x_phase_new, cmap='gray')  # 误差值
+    plt.axis('off')
+    plt.title('error_x_phase_new')
+
+    plt.figure()
+    plt.plot(error_x_phase_new_slice)  # 误差值
+    plt.xticks([0, 479])
+    plt.yticks([0, 0.006])
+    plt.grid()
+    plt.title('error_x_phase_new_slice')
     plt.show()
 
     sum_error4 = 0
     for i in range(480):
         for j in range(480):
-            sum_error4 = sum_error4 + error_x[i, j]
-    mae_x = sum_error4 / 480 / 480
-    print('mae_x:', mae_x)
-
-    plt.imshow(x_phase_label, cmap='gray')  # 原始值
-    plt.axis('off')
-    plt.figure()
-    plt.show()
+            sum_error4 = sum_error4 + error_x_phase_new[i, j]
+    mae_phase_new = sum_error4 / 480 / 480
+    print('mae_phase_new:', mae_phase_new)
